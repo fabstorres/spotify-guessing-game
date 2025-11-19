@@ -14,8 +14,8 @@ My approach takes the opposite route by using Bun’s ability to build full-stac
 
 - [x] Setup Bun and React
 - [x] Setup Spotify OAuth2
-- [ ] Database Integration
-- [ ] Session Tokens for Clients
+- [x] Database Integration
+- [x] Session Tokens for Clients
 - [ ] Setup WebSockets
 - [ ] Setup Lobbies
 - [ ] Setup Multiplayer State

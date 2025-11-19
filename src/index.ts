@@ -1,14 +1,22 @@
-import { randomUUIDv5, serve } from "bun";
+import { serve } from "bun";
 import index from "./index.html";
+import { createSession, getSession } from "./server/db";
 
 const server = serve({
   routes: {
     // Serve index.html for all unmatched routes.
     "/*": index,
-
+    // TODO: if session is expired, and refresh token is valid, refresh access token
     "/spotify/login": {
       async GET(req) {
-        const state = randomUUIDv5('https://accounts.spotify.com/authorize', 'url');
+        const state = crypto.randomUUID();
+        const session_id = req.headers.get("Cookie")?.split(";").find((cookie) => cookie.startsWith("sid="))?.split("=")[1];
+        if (session_id) {
+          const session = getSession(session_id);
+          if (session && session.expires_at > Math.floor(Date.now() / 1000)) {
+            return Response.redirect("http://127.0.0.1:3000");
+          }
+        }
         const query = {
           response_type: 'code',
           client_id: Bun.env.SPOTIFY_CLIENT_ID!,
@@ -20,7 +28,8 @@ const server = serve({
         return Response.redirect(`https://accounts.spotify.com/authorize?${new URLSearchParams(query).toString()}`)
       },
     },
-
+    // TODO: enforce result on fetches return type with zod
+    // TODO: handle errors gracefully
     "/spotify/callback": {
       async GET(req) {
         const { searchParams } = new URL(req.url);
@@ -49,8 +58,23 @@ const server = serve({
         }
 
         const data = await results.json()
-        console.log(data)
-        return new Response(data)
+        const session_id = crypto.randomUUID()
+        createSession(session_id, data.access_token, data.refresh_token, data.expires_in);
+
+        const headers = new Headers();
+        headers.append(
+          "Set-Cookie",
+          [
+            `sid=${session_id}`,
+            "HttpOnly",
+            "Secure",
+            "SameSite=Lax",
+            "Path=/",
+            `Max-Age=${60 * 60 * 24 * 7}`
+          ].join("; ")
+        );
+
+        return new Response("ok", { status: 200, headers });
       }
     }
   },
