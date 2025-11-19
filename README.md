@@ -1,21 +1,32 @@
-# bun-react-tailwind-template
+# Spotify Guessing Game
 
-To install dependencies:
+A simple game where you try to guess which friend has a song on their playlist.
 
-```bash
-bun install
-```
+## Introduction
 
-To start a development server:
+This project began as a remake (or, more accurately, a reimagining) of a friend’s original idea: a small multiplayer game powered by Spotify data.
 
-```bash
-bun dev
-```
+My friend’s version got Spotify OAuth2 working inside a Next.js Pages Router, but once the systems for lobbies and multiplayer state came into play, the need for a different architecture became clear. The challenge was trying to fit everything inside Next.js, which ultimately became the bottleneck.
 
-To run for production:
+My approach takes the opposite route by using Bun’s ability to build full-stack applications with its React template. The goal is for Bun to serve React to the client while also exposing a route for WebSocket connections. This keeps the original project’s monolithic approach while opening the door to a more maintainable setup.
 
-```bash
-bun start
-```
+## Milestones
 
-This project was created using `bun init` in bun v1.3.2. [Bun](https://bun.com) is a fast all-in-one JavaScript runtime.
+- [x] Setup Bun and React
+- [x] Setup Spotify OAuth2
+- [ ] Database Integration
+- [ ] Session Tokens for Clients
+- [ ] Setup WebSockets
+- [ ] Setup Lobbies
+- [ ] Setup Multiplayer State
+
+## Tech Stack
+
+- [Bun](https://bun.sh)
+- [React](https://reactjs.org)
+- [Tailwind CSS](https://tailwindcss.com)
+- [Spotify Web API](https://developer.spotify.com/web-api)
+
+## License
+
+[MIT](https://github.com/fabstorres/spotify-guessing-game/blob/main/LICENSE)
