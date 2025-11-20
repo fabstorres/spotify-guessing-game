@@ -1,8 +1,16 @@
 import { serve } from "bun";
-import index from "./index.html";
-import { createSession, getSession } from "./server/db";
+import index from "@/index.html";
+import { createSession, getSession } from "@/server/db";
 import { randomUUID } from "crypto";
-import { Spotify } from "./server/spotify";
+import { Spotify, type SpotifyUser } from "@/server/spotify";
+
+const rooms = new Map<string, {
+  id: string;
+  users: {
+    session_id: string;
+    user: SpotifyUser
+  }[]
+}>();
 
 const server = serve({
   routes: {
@@ -14,8 +22,8 @@ const server = serve({
         const state = crypto.randomUUID();
         const session_id = req.headers.get("Cookie")?.split(";").find((cookie) => cookie.startsWith("sid="))?.split("=")[1];
         if (session_id) {
-          const session = getSession(session_id);
-          if (session && session.expires_at > Math.floor(Date.now() / 1000)) {
+          const session = await getSession(session_id); // We can always gurantee that the session is not expired if not null
+          if (session) {
             return Response.redirect("http://127.0.0.1:3000");
           }
         }
@@ -89,19 +97,34 @@ const server = serve({
           console.log("No session id");
           return new Response("No session id", { status: 401 })
         }
-        const session = getSession(session_id);
-        if (!session || session.expires_at < Math.floor(Date.now() / 1000)) {
-          console.log("No session or expired session", session?.expires_at, Math.floor(Date.now() / 1000));
+        const session = await getSession(session_id);
+        if (!session) {
+          console.log("No session");
           return new Response("No session", { status: 401 })
         }
 
-        // const [userDataResults, topTracksResults] = await Promise.all([
-        //   Spotify.getUserData(session.access_token),
-        //   Spotify.getUserTopTracks(session.access_token)
-        // ])
+        const [userDataResults, topTracksResults] = await Promise.all([
+          Spotify.getUserData(session.access_token),
+          Spotify.getUserTopTracks(session.access_token)
+        ])
+
+        if (!userDataResults.success || !topTracksResults.success) {
+          return Response.json({ error: "Failed to get user data" });
+        }
+
+        const roomCode = randomUUID().slice(0, 4)
+        rooms.set(roomCode, {
+          id: roomCode,
+          users: [
+            {
+              session_id,
+              user: userDataResults.data
+            }
+          ]
+        })
 
         return Response.json({
-          roomCode: randomUUID().slice(0, 4)
+          roomCode
         }, { status: 200 })
       }
     },
@@ -111,8 +134,8 @@ const server = serve({
         if (!session_id) {
           return Response.json({ error: "No session id" });
         }
-        const session = getSession(session_id);
-        if (!session || session.expires_at < Math.floor(Date.now() / 1000)) {
+        const session = await getSession(session_id);
+        if (!session) {
           return Response.json({ error: "No session" });
         }
 
@@ -153,8 +176,9 @@ const server = serve({
     },
 
   },
+  // TODO: the dummy rooms data is not to be used for later. This is just for testing purposes
   websocket: {
-    open: (ws) => { console.log("open",); },
+    open: (ws) => { console.log("open",); ws.send(JSON.stringify(rooms.values().next().value)) },
     close: (ws) => { console.log("close"); },
     message: (ws) => { console.log("message"); },
   },

@@ -1,20 +1,22 @@
 import { useWebSocket } from "@/providers/WebSocketProvider";
+import { useNavigate } from "react-router";
 
 export default function Join() {
     const { connect } = useWebSocket();
+    const navigate = useNavigate();
     async function onSubmitCreateAction(e: React.FormEvent<HTMLFormElement>) {
         e.preventDefault();
         const res = await fetch("/api/games/create", {
             method: "POST",
         });
         if (!res.ok) {
-            alert(res.statusText);
+            window.location.href = "/spotify/login";
             return;
         }
         const data = await res.json();
         const roomCode = data.roomCode as string;
         connect(roomCode);
-
+        navigate(`/game/${roomCode}`);
     }
 
     async function onSubmitJoinAction(e: React.FormEvent<HTMLFormElement>) {
@@ -24,12 +26,13 @@ export default function Join() {
             body: JSON.stringify({ roomCode: e.currentTarget.roomCode.value }),
         });
         if (!res.ok) {
-            alert(res.statusText);
+            window.location.href = "/spotify/login";
             return;
         }
         const data = await res.json();
         const roomCode = data.roomCode as string;
         connect(roomCode);
+        navigate(`/game/${roomCode}`);
     }
 
     return (

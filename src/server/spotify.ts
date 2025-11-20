@@ -95,6 +95,16 @@ export const TopTracksResponseSchema = z.object({
 
 export type TopTracksResponse = z.infer<typeof TopTracksResponseSchema>;
 
+export const RefreshTokenResponseSchema = z.object({
+    access_token: z.string(),
+    token_type: z.string(),
+    expires_in: z.number().int(),
+    refresh_token: z.string(),
+    scope: z.string(),
+})
+
+export type RefreshTokenResponse = z.infer<typeof RefreshTokenResponseSchema>;
+
 export const Spotify = {
     getUserData: async (access_token: string) => {
         try {
@@ -138,6 +148,36 @@ export const Spotify = {
             const validatedData = TopTracksResponseSchema.safeParse(data);
             if (!validatedData.success) {
                 return Result.fail("Failed to validate user top tracks")
+            }
+
+            return Result.ok(validatedData.data);
+        } catch (error) {
+            const msg = error instanceof Error ? error.message : String(error);
+            return Result.fail(msg)
+        }
+    },
+    refreshAccessToken: async (refresh_token: string) => {
+        try {
+            const res = await fetch('https://accounts.spotify.com/api/token', {
+                method: 'POST',
+                headers: {
+                    Authorization: `Basic ${Buffer.from(`${Bun.env.SPOTIFY_CLIENT_ID}:${Bun.env.SPOTIFY_CLIENT_SECRET}`).toString('base64')}`,
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: new URLSearchParams({
+                    grant_type: 'refresh_token',
+                    refresh_token,
+                })
+            })
+            if (!res.ok) {
+                return Result.fail("Failed to refresh access token")
+            }
+
+            const data = await res.json();
+
+            const validatedData = RefreshTokenResponseSchema.safeParse(data);
+            if (!validatedData.success) {
+                return Result.fail("Failed to validate refresh token response")
             }
 
             return Result.ok(validatedData.data);

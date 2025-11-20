@@ -4,6 +4,7 @@ export type WebSocketContextType = {
     socket: WebSocket | null;
     state: "disconnected" | "connecting" | "connected" | "error";
     error: string | null;
+    messages: string[];
     connect: (roomCode: string) => void;
 }
 
@@ -13,6 +14,7 @@ export const WebSocketProvider = ({ children }: { children: React.ReactNode }) =
     const socket = useRef<WebSocket | null>(null);
     const [state, setState] = useState<"disconnected" | "connecting" | "connected" | "error">("disconnected");
     const [error, setError] = useState<string | null>(null);
+    const [messages, setMessages] = useState<string[]>([]);
 
     const connect = (roomCode: string) => {
         socket.current = new WebSocket(`ws://localhost:3000/ws/game?roomCode=${roomCode}`);
@@ -26,10 +28,13 @@ export const WebSocketProvider = ({ children }: { children: React.ReactNode }) =
             setState("error");
             setError("Socket error");
         };
+        socket.current.onmessage = (event) => {
+            setMessages((prev) => [...prev, event.data]);
+        };
     }
 
     return (
-        <WebSocketContext.Provider value={{ socket: socket.current, state, error, connect }}>
+        <WebSocketContext.Provider value={{ socket: socket.current, state, error, messages, connect }}>
             {children}
         </WebSocketContext.Provider>
     );
