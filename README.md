@@ -19,7 +19,7 @@ My approach takes the opposite route by using Bun’s ability to build full-stac
 - [x] Setup WebSockets
 - [x] Generate Room Code for Creation and Joining
 - [x] Fetch Spotify Data
-- [ ] Implement Refresh Tokens
+- [x] Implement Refresh Tokens
 - [ ] Setup Lobbies
 - [ ] Create Game Logic
 
