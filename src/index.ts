@@ -1,6 +1,8 @@
 import { serve } from "bun";
 import index from "./index.html";
 import { createSession, getSession } from "./server/db";
+import { randomUUID } from "crypto";
+import { Spotify } from "./server/spotify";
 
 const server = serve({
   routes: {
@@ -20,7 +22,7 @@ const server = serve({
         const query = {
           response_type: 'code',
           client_id: Bun.env.SPOTIFY_CLIENT_ID!,
-          scope: 'user-read-private user-read-email playlist-read-private playlist-read-collaborative',
+          scope: 'user-read-private user-read-email playlist-read-private playlist-read-collaborative user-top-read',
           redirect_uri: 'http://127.0.0.1:3000/spotify/callback',
           state: state
         }
@@ -67,7 +69,7 @@ const server = serve({
           [
             `sid=${session_id}`,
             "HttpOnly",
-            "Secure",
+            Bun.env.NODE_ENV === "production" ? "Secure" : "",
             "SameSite=Lax",
             "Path=/",
             `Max-Age=${60 * 60 * 24 * 7}`
@@ -76,9 +78,86 @@ const server = serve({
 
         return new Response("ok", { status: 200, headers });
       }
-    }
-  },
+    },
+    // Add a cache for lobby data
+    "/api/games/create": {
+      async POST(req) {
+        console.log("[api/games/create] headers: ", req.headers);
+        const session_id = req.headers.get("Cookie")?.split(";").find((cookie) => cookie.startsWith("sid="))?.split("=")[1];
+        console.log("[api/games/create] session id: ", session_id);
+        if (!session_id) {
+          console.log("No session id");
+          return new Response("No session id", { status: 401 })
+        }
+        const session = getSession(session_id);
+        if (!session || session.expires_at < Math.floor(Date.now() / 1000)) {
+          console.log("No session or expired session", session?.expires_at, Math.floor(Date.now() / 1000));
+          return new Response("No session", { status: 401 })
+        }
 
+        // const [userDataResults, topTracksResults] = await Promise.all([
+        //   Spotify.getUserData(session.access_token),
+        //   Spotify.getUserTopTracks(session.access_token)
+        // ])
+
+        return Response.json({
+          roomCode: randomUUID().slice(0, 4)
+        }, { status: 200 })
+      }
+    },
+    "/api/games/join": {
+      async POST(req) {
+        const session_id = req.headers.get("Cookie")?.split(";").find((cookie) => cookie.startsWith("sid="))?.split("=")[1];
+        if (!session_id) {
+          return Response.json({ error: "No session id" });
+        }
+        const session = getSession(session_id);
+        if (!session || session.expires_at < Math.floor(Date.now() / 1000)) {
+          return Response.json({ error: "No session" });
+        }
+
+        const { roomCode } = await req.json();
+
+        if (!roomCode) {
+          return Response.json({ error: "No room code" });
+        }
+
+        // check if room exists and not full
+
+        // const [userDataResults, topTracksResults] = await Promise.all([
+        //   Spotify.getUserData(session.access_token),
+        //   Spotify.getUserTopTracks(session.access_token)
+        // ])
+
+        // if (!userDataResults.success || !topTracksResults.success) {
+        //   return Response.json({ error: "Failed to get user data" });
+        // }
+
+        // insert data into lobby
+
+        return Response.json({
+          roomCode
+        })
+      }
+    },
+    "/ws/game": {
+      async GET(req) {
+        if (server.upgrade(req)) {
+          return new Response(null);
+        }
+        return new Response("Expected WebSocket upgrade", {
+          status: 426,
+          headers: { Upgrade: "websocket" },
+        });
+      }
+    },
+
+  },
+  websocket: {
+    open: (ws) => { console.log("open",); },
+    close: (ws) => { console.log("close"); },
+    message: (ws) => { console.log("message"); },
+  },
   development: process.env.NODE_ENV !== "production" && {
     // Enable browser hot reloading in development
     hmr: true,
