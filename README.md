@@ -16,9 +16,12 @@ My approach takes the opposite route by using Bun’s ability to build full-stac
 - [x] Setup Spotify OAuth2
 - [x] Database Integration
 - [x] Session Tokens for Clients
-- [ ] Setup WebSockets
+- [x] Setup WebSockets
+- [x] Generate Room Code for Creation and Joining
+- [x] Fetch Spotify Data
+- [ ] Implement Refresh Tokens
 - [ ] Setup Lobbies
-- [ ] Setup Multiplayer State
+- [ ] Create Game Logic
 
 ## Tech Stack
 
